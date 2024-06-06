@@ -1,4 +1,4 @@
-package messages;
+package client;
 
 public class ClientMessages {
     public static final String DEFAULT_NAME = "PLAYER-";

@@ -1,7 +1,9 @@
-import messages.ServerMessages;
+package client;
 
 import java.io.*;
 import java.net.Socket;
+
+import server.ServerMessages;
 
 public class Player {
 
@@ -9,7 +11,7 @@ public class Player {
 
         Player player = new Player();
         try {
-            player.start("localhost", 8080);
+            player.start("localhost", 8082);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -45,7 +47,7 @@ public class Player {
         @Override
         public void run() {
 
-            while(!socket.isClosed()) {
+            while (!socket.isClosed()) {
                 String line = null;
                 try {
                     line = in.readLine();
