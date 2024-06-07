@@ -2,9 +2,13 @@ package server.commands;
 
 public enum Command {
 
-    NAME,
-    List,
-    NOT_FOUND;
+    NAME("/name", new NameHandler()),
+    HELP("/help", new HelpHandler()),
+    // RULES("/rules", new RulesHandler()),
+    // SHOW_CARDS_NOT_SEEN("/show", new ShowNotSeenHandler()),
+    // BET("/bet", new BetHandler()),
+    // FINAL_BET("/finalbet", new FinalBetHandler()),
+    NOT_FOUND("Command not found!", new CommandNotFoundHandler());
 
     private String description;
     private CommandHandler handler;

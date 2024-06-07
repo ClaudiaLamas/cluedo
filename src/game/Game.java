@@ -11,12 +11,13 @@ import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.swing.text.html.HTMLDocument.Iterator;
+import javax.management.RuntimeErrorException;
 
 import client.ClientMessages;
 import game.cards.Card;
 import game.cards.CardsFactory;
 import game.cards.CardsType;
+import server.commands.Command;
 
 public class Game implements Runnable {
 
@@ -46,36 +47,55 @@ public class Game implements Runnable {
                 startGame();
 
             }
-            // if (isGameStarted && !isGameFinished){
-            // playround()
-            // }
+            if (isGameStarted && !isGameFinished) {
+                playround();
+            }
         }
+        finishGame();
 
     }
 
-    private boolean checkIfGameCanStart() {
-        return isGameFull();
+    private void finishGame() {
+        for (PlayerConnectionHandler player : players) {
+            player.quitGame();
+        }
+        isGameFinished = true;
+    }
+
+    private void playround() {
+        System.out.println("===============");
+        System.out.println("FIRST ROUND ");
+        System.out.println("===============");
     }
 
     public boolean isGameFull() {
         return players.size() == MAX_NUM_PLAYERS;
     }
 
-    public void acceptPlayer(int numberOfConnections, Socket playerSocket) throws IOException {
-        // Socket clientSocket = serverSocket.accept();
-
-        PlayerConnectionHandler player = new PlayerConnectionHandler(
-                playerSocket, ClientMessages.DEFAULT_NAME + numberOfConnections);
-
+    public void acceptPlayer(Socket playerSocket) throws IOException {
+        PlayerConnectionHandler player = new PlayerConnectionHandler(playerSocket);
         service.submit(player);
+    }
 
+    private boolean checkIfGameCanStart() {
+        return isGameFull() && (players.get(0).getName() != null) && (players.get(1).getName() != null);
     }
 
     private void startGame() {
         System.out.println("Game started...");
         this.isGameStarted = true;
         createCrimeEnvelope();
+        System.out.println("secret envelop Created: -> " + crimeEnvelope.toString());
         dealCards();
+        System.out.println("Player's hand: ");
+        for (PlayerConnectionHandler player : players) {
+            player.send("Game Ready to Start!");
+
+            // System.out.println(player.getName() + " ---> " +
+            // player.getHand().toString());
+        }
+        broadcastAll(GameMessages.START_GAME);
+        broadcastAll(GameTitles.TITLE);
     }
 
     private void createCrimeEnvelope() {
@@ -107,21 +127,25 @@ public class Game implements Runnable {
 
     private void dealCards() {
 
-        PlayerConnectionHandler player1 = players.get(0);
-        PlayerConnectionHandler player2 = players.get(1);
-        PlayerConnectionHandler player3 = players.get(2);
+        while (deck.size() > 0) {
 
-        // SHUFFLE DECK
-        // NUMBER Of CARDS PER PLAYER
-        // PICK THE CARDS FOR EACH PLAYER
-        // player setHand()
+            for (int i = 0; i <= players.size(); i++) {
+
+                Card card = deck.get((int) (Math.random() * deck.size()));
+                players.get(i).getHand().add(card);
+                deck.remove(card);
+
+            }
+        }
 
     }
 
     private void addPlayer(PlayerConnectionHandler playerConnectionHandler) {
         players.add(playerConnectionHandler);
-        playerConnectionHandler.send(ClientMessages.WELCOME.formatted(playerConnectionHandler.getName()));
-        broadcast(playerConnectionHandler.getName(), ClientMessages.PLAYER_ENTERED_GAME);
+        playerConnectionHandler.send(GameTitles.TITLE);
+        playerConnectionHandler.send(GameMessages.COMMAND_LIST);
+        // broadcast(playerConnectionHandler.getName(),
+        // ClientMessages.PLAYER_ENTERED_GAME);
 
     }
 
@@ -135,6 +159,10 @@ public class Game implements Runnable {
                 .forEach(handler -> handler.send(name + ": " + message));
     }
 
+    public void broadcastAll(String message) {
+        players.forEach(player -> player.send(message));
+    }
+
     public Optional<PlayerConnectionHandler> getPlayerByName(String name) {
         return players.stream()
                 .filter(playerConnectionHandler -> playerConnectionHandler.getName().equals(name))
@@ -144,16 +172,74 @@ public class Game implements Runnable {
     public class PlayerConnectionHandler implements Runnable {
 
         private String name;
-        private final Socket clientSocket;
-        private final BufferedWriter out;
         private String message;
+        private final Socket playerSocket;
+        private final BufferedWriter out;
+        private Scanner in;
 
         private List<Card> hand;
 
-        public PlayerConnectionHandler(Socket clientSocket, String name) throws IOException {
-            this.clientSocket = clientSocket;
-            this.name = name;
-            this.out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+        public PlayerConnectionHandler(Socket playerSocket) {
+            this.playerSocket = playerSocket;
+            try {
+                this.out = new BufferedWriter(new OutputStreamWriter(playerSocket.getOutputStream()));
+                in = new Scanner(playerSocket.getInputStream());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        public void quitGame() {
+            try {
+                playerSocket.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public void run() {
+            addPlayer(this);
+            askName();
+
+            if (players.size() < MAX_NUM_PLAYERS) {
+                send(GameMessages.WAITING_FOR_PLAYER_JOIN);
+            }
+
+            try {
+                in = new Scanner(playerSocket.getInputStream());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            while (in.hasNext()) {
+                message = in.nextLine();
+                if (isCommand(message)) {
+                    dealWhithCommand(message);
+                    continue;
+                }
+                broadcast(name, message);
+            }
+
+        }
+
+        private void askName() {
+            send(GameMessages.ENTER_NAME);
+            name = in.nextLine();
+            send("Hi, " + name);
+        }
+
+        private void dealWhithCommand(String message) {
+
+            String description = message.split(" ")[0];
+            Command command = Command.getCommandDescription(description);
+
+            command.getHandler().handleCommands(Game.this, this);
+
+        }
+
+        private boolean isCommand(String message) {
+            return message.startsWith("/");
         }
 
         public void send(String message) {
@@ -164,24 +250,6 @@ public class Game implements Runnable {
             } catch (IOException e) {
                 removePlayer(this);
                 e.printStackTrace();
-            }
-
-        }
-
-        @Override
-        public void run() {
-            addPlayer(this);
-            Scanner in = null;
-
-            try {
-                in = new Scanner(clientSocket.getInputStream());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-
-            while (in.hasNext()) {
-                message = in.nextLine();
-                broadcast(name, message);
             }
 
         }
@@ -200,6 +268,10 @@ public class Game implements Runnable {
 
         public void setHand(List<Card> hand) {
             this.hand = hand;
+        }
+
+        public void setName(String name) {
+            this.name = name;
         }
 
     }

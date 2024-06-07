@@ -1,7 +1,7 @@
 package server;
 
-import exception.ServerCouldNotLaunch;
 import game.Game;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.concurrent.ExecutorService;
@@ -41,8 +41,9 @@ public class Server {
         while (serverSocket.isBound()) {
 
             if (!game.isGameFull()) {
-                game.acceptPlayer(numberOfConnections, serverSocket.accept());
+                game.acceptPlayer(serverSocket.accept());
                 ++numberOfConnections;
+                System.out.println(ServerMessages.NEW_PLAYER);
             }
 
         }
