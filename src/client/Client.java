@@ -1,17 +1,19 @@
-import messages.ServerMessages;
+package client;
 
 import java.io.*;
 import java.net.Socket;
 
-public class Player {
+import server.ServerMessages;
+
+public class Client {
 
     public static void main(String[] args) {
 
-        Player player = new Player();
+        Client client = new Client();
         try {
-            player.start("localhost", 8080);
+            client.start("localhost", 8080);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.out.println("Conection closed...");
         }
 
     }
@@ -21,7 +23,7 @@ public class Player {
         BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
         BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-        new Thread(new keyboardHandler(out, socket)).start();
+        new Thread(new playerInput(out, socket)).start();
 
         String line;
         while ((line = in.readLine()) != null) {
@@ -30,22 +32,22 @@ public class Player {
         socket.close();
     }
 
-    private class keyboardHandler implements Runnable {
+    private class playerInput implements Runnable {
 
         private BufferedWriter out;
         private BufferedReader in;
-        private Socket socket;
+        private Socket playerSocket;
 
-        public keyboardHandler(BufferedWriter out, Socket socket) {
+        public playerInput(BufferedWriter out, Socket playerSocket) {
             this.out = out;
-            this.socket = socket;
+            this.playerSocket = playerSocket;
             this.in = new BufferedReader(new InputStreamReader(System.in));
         }
 
         @Override
         public void run() {
 
-            while(!socket.isClosed()) {
+            while (!playerSocket.isClosed()) {
                 String line = null;
                 try {
                     line = in.readLine();
@@ -53,12 +55,17 @@ public class Player {
                     out.newLine();
                     out.flush();
 
-                    if (line.equals("/quit")) {
-                        socket.close();
+                    if (line.equalsIgnoreCase("/quit")) {
+                        playerSocket.close();
                         System.exit(0);
                     }
                 } catch (IOException e) {
                     System.out.println(ServerMessages.SERVER_ERROR);
+                    try {
+                        playerSocket.close();
+                    } catch (IOException err) {
+                        err.printStackTrace();
+                    }
                 }
             }
         }
