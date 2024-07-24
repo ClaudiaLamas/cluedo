@@ -11,9 +11,6 @@ import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.management.RuntimeErrorException;
-
-import client.ClientMessages;
 import game.cards.Card;
 import game.cards.CardsFactory;
 import game.cards.CardsType;
@@ -23,12 +20,13 @@ public class Game implements Runnable {
 
     private ExecutorService service;
     private final List<PlayerConnectionHandler> players;
-    private static final int MAX_NUM_PLAYERS = 3;
+    private static final int MAX_NUM_PLAYERS = 2;
     private boolean isGameStarted;
     private boolean isGameFinished;
 
     private List<Card> deck;
     private List<Card> crimeEnvelope;
+    private int round;
 
     public Game() {
 
@@ -37,6 +35,7 @@ public class Game implements Runnable {
         isGameStarted = false;
         isGameFinished = false;
         deck = CardsFactory.create();
+        crimeEnvelope = new ArrayList<>();
 
     }
 
@@ -49,6 +48,7 @@ public class Game implements Runnable {
             }
             if (isGameStarted && !isGameFinished) {
                 playround();
+
             }
         }
         finishGame();
@@ -63,39 +63,90 @@ public class Game implements Runnable {
     }
 
     private void playround() {
-        System.out.println("===============");
-        System.out.println("FIRST ROUND ");
-        System.out.println("===============");
+        round++;
+        broadcastAll("=== ROUND -----> " + round + "  =====");
+
+        for (PlayerConnectionHandler player : players) {
+
+            PlayerConnectionHandler opponent = player.getOpponent();
+
+            player.send(GameMessages.PLAYER_TURN);
+            opponent.send(String.format(GameMessages.OPPONENT_TURN, player.getName()));
+
+            while (true) {
+                if (player.getMessage() == null || opponent.getMessage() == null) {
+                    continue;
+                }
+
+                String answer;
+
+                if (player.getMessage().equals("/bet")) {
+
+                    answer = opponent.getMessage();
+
+                    if (answer.equalsIgnoreCase("no") || answer.equalsIgnoreCase("one card name")) {
+                        break;
+                    }
+                    ;
+
+                }
+            }
+        }
     }
 
     public boolean isGameFull() {
-        return players.size() == MAX_NUM_PLAYERS;
+        synchronized (players) {
+            return players.size() == MAX_NUM_PLAYERS;
+        }
     }
 
     public void acceptPlayer(Socket playerSocket) throws IOException {
+
+        if (isGameStarted) {
+            System.out.println("the game is already full!");
+            playerSocket.close();
+            return;
+        }
+        System.out.println("Accepting new player...");
         PlayerConnectionHandler player = new PlayerConnectionHandler(playerSocket);
+        synchronized (players) {
+            players.add(player);
+            System.out.println("Player added: " + playerSocket.toString());
+        }
         service.submit(player);
     }
 
     private boolean checkIfGameCanStart() {
-        return isGameFull() && (players.get(0).getName() != null) && (players.get(1).getName() != null);
+        synchronized (players) {
+            boolean canStart = players.size() == MAX_NUM_PLAYERS &&
+                    players.stream().allMatch(player -> player.getName() != null && !player.getName().isEmpty());
+            return canStart;
+        }
     }
 
     private void startGame() {
-        System.out.println("Game started...");
+        // if (isGameStarted)
+        // return;
+
+        System.out.println("Game started... - whith players: " + players.size());
         this.isGameStarted = true;
         createCrimeEnvelope();
-        System.out.println("secret envelop Created: -> " + crimeEnvelope.toString());
+        System.out.println("secret envelop Created: -> " + "\n" + crimeEnvelope.get(0).getCardArt() + " \n "
+                + crimeEnvelope.get(1).getCardArt() + " \n " + crimeEnvelope.get(2).getCardArt());
         dealCards();
-        System.out.println("Player's hand: ");
-        for (PlayerConnectionHandler player : players) {
-            player.send("Game Ready to Start!");
 
-            // System.out.println(player.getName() + " ---> " +
-            // player.getHand().toString());
+        System.out.println("Player's hand: ");
+        synchronized (players) {
+            for (PlayerConnectionHandler player : players) {
+                player.send("Game Ready to Start!");
+
+                System.out.println(player.getName() + " ---> " +
+                        player.getHand().toString());
+            }
         }
         broadcastAll(GameMessages.START_GAME);
         broadcastAll(GameTitles.TITLE);
+        broadcastAll(GameMessages.COMMAND_LIST);
     }
 
     private void createCrimeEnvelope() {
@@ -116,6 +167,8 @@ public class Game implements Runnable {
         deck.remove(criminalCrime);
         deck.remove(weaponCrime);
 
+        System.out.println("Crime envelope created with: " + crimeEnvelope);
+
     }
 
     private List<Card> selectAllCardsByType(CardsType type) {
@@ -127,46 +180,57 @@ public class Game implements Runnable {
 
     private void dealCards() {
 
+        int playerIndex = 0;
+
         while (deck.size() > 0) {
-
-            for (int i = 0; i <= players.size(); i++) {
-
-                Card card = deck.get((int) (Math.random() * deck.size()));
-                players.get(i).getHand().add(card);
-                deck.remove(card);
-
+            Card card = deck.get((int) (Math.random() * deck.size()));
+            synchronized (players) {
+                players.get(playerIndex).getHand().add(card);
             }
+            deck.remove(card);
+            playerIndex = (playerIndex + 1) % players.size();
+
         }
 
     }
 
-    private void addPlayer(PlayerConnectionHandler playerConnectionHandler) {
-        players.add(playerConnectionHandler);
-        playerConnectionHandler.send(GameTitles.TITLE);
-        playerConnectionHandler.send(GameMessages.COMMAND_LIST);
-        // broadcast(playerConnectionHandler.getName(),
-        // ClientMessages.PLAYER_ENTERED_GAME);
+    // private void addPlayer(PlayerConnectionHandler playerConnectionHandler) {
+    // synchronized (players) {
+    // players.add(playerConnectionHandler);
+    // }
+    // playerConnectionHandler.send(GameTitles.TITLE);
+    // playerConnectionHandler.send(GameMessages.COMMAND_LIST);
+    // // broadcast(playerConnectionHandler.getName(),
+    // // ClientMessages.PLAYER_ENTERED_GAME);
 
-    }
+    // }
 
     private void removePlayer(PlayerConnectionHandler playerConnectionHandler) {
-        players.remove(playerConnectionHandler);
+        synchronized (players) {
+            players.remove(playerConnectionHandler);
+        }
     }
 
     public void broadcast(String name, String message) {
-        players.stream()
-                .filter(handler -> !handler.getName().equals(name))
-                .forEach(handler -> handler.send(name + ": " + message));
+        synchronized (players) {
+            players.stream()
+                    .filter(handler -> !handler.getName().equals(name))
+                    .forEach(handler -> handler.send(name + ": " + message));
+        }
     }
 
     public void broadcastAll(String message) {
-        players.forEach(player -> player.send(message));
+        synchronized (players) {
+            players.forEach(player -> player.send(message));
+        }
     }
 
     public Optional<PlayerConnectionHandler> getPlayerByName(String name) {
-        return players.stream()
-                .filter(playerConnectionHandler -> playerConnectionHandler.getName().equals(name))
-                .findFirst();
+        synchronized (players) {
+            return players.stream()
+                    .filter(playerConnectionHandler -> playerConnectionHandler.getName().equals(name))
+                    .findFirst();
+        }
     }
 
     public class PlayerConnectionHandler implements Runnable {
@@ -184,9 +248,20 @@ public class Game implements Runnable {
             try {
                 this.out = new BufferedWriter(new OutputStreamWriter(playerSocket.getOutputStream()));
                 in = new Scanner(playerSocket.getInputStream());
+                this.hand = new ArrayList<>();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        }
+
+        public PlayerConnectionHandler getOpponent() {
+
+            if (players.get(0).equals(this)) {
+                return players.get(1);
+            }
+
+            return players.get(0);
+
         }
 
         public void quitGame() {
@@ -199,17 +274,10 @@ public class Game implements Runnable {
 
         @Override
         public void run() {
-            addPlayer(this);
             askName();
 
             if (players.size() < MAX_NUM_PLAYERS) {
                 send(GameMessages.WAITING_FOR_PLAYER_JOIN);
-            }
-
-            try {
-                in = new Scanner(playerSocket.getInputStream());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
             }
 
             while (in.hasNext()) {
@@ -218,6 +286,7 @@ public class Game implements Runnable {
                     dealWhithCommand(message);
                     continue;
                 }
+
                 broadcast(name, message);
             }
 
@@ -225,7 +294,12 @@ public class Game implements Runnable {
 
         private void askName() {
             send(GameMessages.ENTER_NAME);
-            name = in.nextLine();
+            while (true) {
+                name = in.nextLine().trim();
+                if (!name.isEmpty())
+                    break;
+                send(GameMessages.ENTER_NAME);
+            }
             send("Hi, " + name);
         }
 

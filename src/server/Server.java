@@ -31,7 +31,6 @@ public class Server {
 
         serverSocket = new ServerSocket(port);
         service = Executors.newSingleThreadExecutor();
-        int numberOfConnections = 0;
         System.out.printf(ServerMessages.SERVER_STARTED, port);
 
         Game game = new Game();
@@ -42,7 +41,6 @@ public class Server {
 
             if (!game.isGameFull()) {
                 game.acceptPlayer(serverSocket.accept());
-                ++numberOfConnections;
                 System.out.println(ServerMessages.NEW_PLAYER);
             }
 

@@ -17,5 +17,8 @@ public class GameMessages {
     public static final String INVALID_COMMAND = "No0 such command\n";
     public static final String WAITING_FOR_PLAYER_JOIN = "Waiting for another player to join...";
     public static final String ENTER_NAME = "NickName: ";
+    public static final String CLIENT_ERROR = "Something went wrong with this client's connection. Error: ";
+    public static final String OPPONENT_TURN = "It's %s's turn. wait for his bet...\\n";
+    public static final String PLAYER_TURN = "It's your turn. Make a bet!";
 
 }
