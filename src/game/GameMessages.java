@@ -7,12 +7,13 @@ public class GameMessages {
             List of available commands:
             ___________________________
 
-            /bet <CardName Criminal; CardName Place; CardName Weapon>\t\t\t -> to throw your bet in your turn
-            /finalbet <CardName Criminal; CardName Place; CardName Weapon>\t\t\t -> once one time in the game: if you guess the cards in the envelope you win, otherwise you loose and quit the game
+            /myhand\t\t\t -> Shows your hand of cards
+            /bet <CardName Criminal; CardName Place; CardName Weapon> -> to throw your bet in your turn
+            /finalbet <CardName Criminal; CardName Place; CardName Weapon> -> once one time in the game: if you guess the cards in the envelope you win, otherwise you loose and quit the game
             /list\t\t\t\t\t\t -> gets you the list of connected clients
-            /whisper <username> <message>\t\t\t -> lets you whisper a message to a single connected client
-            /help\t\t\t\t\t\t\t\t\t -> show all commands
-            /name <new name>\t\t\t\t\t\t -> lets you change your name
+            /whisper <username> <message>\t\t -> lets you whisper a message to a single connected client
+            /help\t\t\t -> show all commands
+            /name <new name>\t\t -> lets you change your name
             /quit\t\t\t -> exits the server""";
     public static final String INVALID_COMMAND = "No0 such command\n";
     public static final String WAITING_FOR_PLAYER_JOIN = "Waiting for another player to join...";

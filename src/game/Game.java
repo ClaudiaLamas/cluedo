@@ -87,7 +87,6 @@ public class Game implements Runnable {
                     if (answer.equalsIgnoreCase("no") || answer.equalsIgnoreCase("one card name")) {
                         break;
                     }
-                    ;
 
                 }
             }
