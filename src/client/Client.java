@@ -48,9 +48,8 @@ public class Client {
         public void run() {
 
             while (!playerSocket.isClosed()) {
-                String line = null;
                 try {
-                    line = in.readLine();
+                    String line = in.readLine();
                     out.write(line);
                     out.newLine();
                     out.flush();

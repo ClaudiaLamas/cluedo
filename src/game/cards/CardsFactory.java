@@ -16,7 +16,7 @@ public class CardsFactory {
         Card p6DataCamp = new Card("DataCamp", CardsType.PLACES, CardArt.p6DataCamp);
         Card c1Diogo = new Card("DiogoVelho", CardsType.CRIMINALS, CardArt.c1Diogo);
         Card c2Christophe = new Card("ChristopheSoares", CardsType.CRIMINALS, CardArt.c2Christophe);
-        Card c3Joao = new Card("JoãoAnes", CardsType.CRIMINALS, CardArt.c3Joao);
+        Card c3Joao = new Card("JoaoAnes", CardsType.CRIMINALS, CardArt.c3Joao);
         Card w1Git = new Card("Git", CardsType.WEAPONS, CardArt.w1Git);
         Card w2Java = new Card("Java", CardsType.WEAPONS, CardArt.w2Java);
         Card w3JavaScript = new Card("JavaScript", CardsType.WEAPONS, CardArt.w3JavaScript);

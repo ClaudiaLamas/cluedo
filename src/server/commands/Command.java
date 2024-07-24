@@ -6,8 +6,9 @@ public enum Command {
     HELP("/help", new HelpHandler()),
     // RULES("/rules", new RulesHandler()),
     // SHOW_CARDS_NOT_SEEN("/show", new ShowNotSeenHandler()),
-    // BET("/bet", new BetHandler()),
+    BET("/bet", new BetHandler()),
     // FINAL_BET("/finalbet", new FinalBetHandler()),
+    MY_HAND("/myhand", new MyHandHandler()),
     NOT_FOUND("Command not found!", new CommandNotFoundHandler());
 
     private String description;
