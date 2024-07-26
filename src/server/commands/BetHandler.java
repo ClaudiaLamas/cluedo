@@ -1,6 +1,7 @@
 package server.commands;
 
 import game.Game;
+import game.GameMessages;
 import game.Game.PlayerConnectionHandler;
 
 public class BetHandler implements CommandHandler {
@@ -10,7 +11,14 @@ public class BetHandler implements CommandHandler {
 
         Game.PlayerConnectionHandler opponent = playerConnectionHandler.getOpponent();
 
-        // playerHandler.send()
+        String betMessage = playerConnectionHandler.getMessage();
+
+        String betToSend = betMessage.substring(4).trim();
+
+        opponent.send("Bet placed by " + playerConnectionHandler.getName() + ":  " + betToSend);
+        opponent.send("\n Do you have any of these cards to show to your opponent?");
+
+        playerConnectionHandler.send(GameMessages.YOU_BET + betToSend);
 
     }
 

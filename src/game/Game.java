@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import game.cards.Card;
 import game.cards.CardsFactory;
@@ -62,35 +63,108 @@ public class Game implements Runnable {
         isGameFinished = true;
     }
 
+    private void startGame() {
+
+        System.out.println("Game started... - whith players: " + players.size());
+        this.isGameStarted = true;
+        createCrimeEnvelope();
+        dealCards();
+
+        System.out.println("Player's hand: ");
+        synchronized (players) {
+            for (PlayerConnectionHandler player : players) {
+                player.send("Game Ready to Start!");
+                player.getSeenCards().addAll(player.hand);
+                player.getMissCards().removeAll(player.seenCards);
+
+                System.out.println(player.getName() + " ---> " +
+                        player.getHand().toString());
+            }
+        }
+
+        broadcastAll(GameMessages.START_GAME);
+        broadcastAll(GameTitles.TITLE);
+        broadcastAll(GameMessages.COMMAND_LIST);
+    }
+
     private void playround() {
         round++;
         broadcastAll("=== ROUND -----> " + round + "  =====");
 
-        for (PlayerConnectionHandler player : players) {
+        // for (PlayerConnectionHandler player : players) {
+        for (int i = 0; i < players.size(); i++) {
+
+            PlayerConnectionHandler player = players.get(i);
 
             PlayerConnectionHandler opponent = player.getOpponent();
 
             player.send(GameMessages.PLAYER_TURN);
-            opponent.send(String.format(GameMessages.OPPONENT_TURN, player.getName()));
 
-            while (true) {
-                if (player.getMessage() == null || opponent.getMessage() == null) {
-                    continue;
+            String missingMessage = getMissingCards(player);
+            player.send("Missing Cards: " + missingMessage + "/n/n");
+
+            opponent.send(String.format(GameMessages.OPPONENT_TURN, player.getName()));
+            opponent.send(GameMessages.SHOW_HAND_OF_CARDS
+                    + Board.printAllCardsArt(opponent.getHand()));
+
+            boolean betReceived = false;
+
+            while (!betReceived) {
+                String playerMessage = player.getMessage();
+
+                if (playerMessage != null && playerMessage.startsWith("/bet")) {
+                    player.send("Bet received: " + playerMessage);
+                    betReceived = true;
+                    break;
                 }
 
-                String answer;
+            }
 
-                if (player.getMessage().equals("/bet")) {
+            boolean validResponse = false;
 
-                    answer = opponent.getMessage();
+            while (!validResponse) {
+                String opponentMessage = opponent.getMessage();
 
-                    if (answer.equalsIgnoreCase("no") || answer.equalsIgnoreCase("one card name")) {
-                        break;
-                    }
+                if (opponentMessage != null && opponentMessage.startsWith("/showcard")) {
+                    Command command = Command.getCommandDescription("/showcard");
+                    command.getHandler().handleCommands(this, opponent);
+                    validResponse = true;
+                    break;
+                } else if (opponentMessage.equalsIgnoreCase("no")) {
+                    player.send(GameMessages.OPPONENT_DOESNT_HAVE_CARD_TO_SHOW);
+                    validResponse = true;
+                    break;
 
+                } else {
+                    opponent.send("Invalid command");
                 }
             }
+
         }
+    }
+
+    // public void handleOpponentAnswer(PlayerConnectionHandler player,
+    // PlayerConnectionHandler opponent,
+    // String opponentResponse) {
+
+    // Optional<Card> cardOptional = opponent.getHand().stream()
+    // .filter(card -> card.getName().equalsIgnoreCase(opponentResponse))
+    // .findFirst();
+
+    // if (cardOptional.isPresent()) {
+    // Card cardToShow = cardOptional.get();
+    // player.send(opponent.getName() + " has a card to show you: \n" +
+    // cardToShow.getCardArt());
+
+    // } else {
+    // opponent.send("\n You don't have that card. Please answer correctly. ");
+    // }
+
+    // }
+
+    public String getMissingCards(PlayerConnectionHandler player) {
+        return (player.getMissCards().stream().map(Card::getName)
+                .collect(Collectors.joining(" | ")));
     }
 
     public boolean isGameFull() {
@@ -121,31 +195,6 @@ public class Game implements Runnable {
                     players.stream().allMatch(player -> player.getName() != null && !player.getName().isEmpty());
             return canStart;
         }
-    }
-
-    private void startGame() {
-        // if (isGameStarted)
-        // return;
-
-        System.out.println("Game started... - whith players: " + players.size());
-        this.isGameStarted = true;
-        createCrimeEnvelope();
-        System.out.println("secret envelop Created: -> " + "\n" + crimeEnvelope.get(0).getCardArt() + " \n "
-                + crimeEnvelope.get(1).getCardArt() + " \n " + crimeEnvelope.get(2).getCardArt());
-        dealCards();
-
-        System.out.println("Player's hand: ");
-        synchronized (players) {
-            for (PlayerConnectionHandler player : players) {
-                player.send("Game Ready to Start!");
-
-                System.out.println(player.getName() + " ---> " +
-                        player.getHand().toString());
-            }
-        }
-        broadcastAll(GameMessages.START_GAME);
-        broadcastAll(GameTitles.TITLE);
-        broadcastAll(GameMessages.COMMAND_LIST);
     }
 
     private void createCrimeEnvelope() {
@@ -193,17 +242,6 @@ public class Game implements Runnable {
 
     }
 
-    // private void addPlayer(PlayerConnectionHandler playerConnectionHandler) {
-    // synchronized (players) {
-    // players.add(playerConnectionHandler);
-    // }
-    // playerConnectionHandler.send(GameTitles.TITLE);
-    // playerConnectionHandler.send(GameMessages.COMMAND_LIST);
-    // // broadcast(playerConnectionHandler.getName(),
-    // // ClientMessages.PLAYER_ENTERED_GAME);
-
-    // }
-
     private void removePlayer(PlayerConnectionHandler playerConnectionHandler) {
         synchronized (players) {
             players.remove(playerConnectionHandler);
@@ -241,6 +279,8 @@ public class Game implements Runnable {
         private Scanner in;
 
         private List<Card> hand;
+        private List<Card> missingCards;
+        private List<Card> seenCards;
 
         public PlayerConnectionHandler(Socket playerSocket) {
             this.playerSocket = playerSocket;
@@ -248,6 +288,8 @@ public class Game implements Runnable {
                 this.out = new BufferedWriter(new OutputStreamWriter(playerSocket.getOutputStream()));
                 in = new Scanner(playerSocket.getInputStream());
                 this.hand = new ArrayList<>();
+                this.missingCards = new ArrayList<>(deck);
+                this.seenCards = new ArrayList<>();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -339,12 +381,28 @@ public class Game implements Runnable {
             return hand;
         }
 
+        public List<Card> getMissCards() {
+            return missingCards;
+        }
+
+        public List<Card> getSeenCards() {
+            return seenCards;
+        }
+
         public void setHand(List<Card> hand) {
             this.hand = hand;
         }
 
         public void setName(String name) {
             this.name = name;
+        }
+
+        public Scanner getScanner() {
+            return in;
+        }
+
+        public void clearMessage() {
+            this.message = null;
         }
 
     }

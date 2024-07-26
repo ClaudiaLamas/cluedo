@@ -2,13 +2,15 @@ package server.commands;
 
 public enum Command {
 
-    NAME("/name", new NameHandler()),
     HELP("/help", new HelpHandler()),
     // RULES("/rules", new RulesHandler()),
-    // SHOW_CARDS_NOT_SEEN("/show", new ShowNotSeenHandler()),
     BET("/bet", new BetHandler()),
-    // FINAL_BET("/finalbet", new FinalBetHandler()),
+    FINAL_BET("/finalbet", new FinalBetHandler()),
     MY_HAND("/myhand", new MyHandHandler()),
+    SHOW_SEEN_CARDS("/seencards", new ShowSeenCards()),
+    SHOW_CARDS_NOT_SEEN("/showmissing", new ShowNotSeenHandler()),
+    SHOW_A_CARD("/showcard", new ShowCardHandler()),
+    // WHISPER("/whisper", new WhisperHandler()),
     NOT_FOUND("Command not found!", new CommandNotFoundHandler());
 
     private String description;
