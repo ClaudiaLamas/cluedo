@@ -8,15 +8,15 @@ public class CardsFactory {
 
         List<Card> deck = new ArrayList<>();
 
-        Card p1MindSwap = new Card("MindSwap", CardsType.PLACES, CardArt.p1MindSwap);
-        Card p2Porto42 = new Card("42Porto", CardsType.PLACES, CardArt.p2Porto42);
-        Card p3CodeForAll = new Card("CodeForAll_", CardsType.PLACES, CardArt.p3CodeForAll);
+        Card p1MindSwap = new Card("Mindera", CardsType.PLACES, CardArt.p1MindSwap);
+        Card p2Porto42 = new Card("Blip", CardsType.PLACES, CardArt.p2Porto42);
+        Card p3CodeForAll = new Card("Critical", CardsType.PLACES, CardArt.p3CodeForAll);
         Card p4Switch = new Card("Switch", CardsType.PLACES, CardArt.p4Switch);
-        Card p5IronHack = new Card("Ironhack", CardsType.PLACES, CardArt.p5IronHack);
+        Card p5IronHack = new Card("MOG", CardsType.PLACES, CardArt.p5IronHack);
         Card p6DataCamp = new Card("DataCamp", CardsType.PLACES, CardArt.p6DataCamp);
-        Card c1Diogo = new Card("DiogoVelho", CardsType.CRIMINALS, CardArt.c1Diogo);
-        Card c2Christophe = new Card("ChristopheSoares", CardsType.CRIMINALS, CardArt.c2Christophe);
-        Card c3Joao = new Card("JoaoAnes", CardsType.CRIMINALS, CardArt.c3Joao);
+        Card c1Diogo = new Card("Velho", CardsType.CRIMINALS, CardArt.c1Diogo);
+        Card c2Christophe = new Card("Chris", CardsType.CRIMINALS, CardArt.c2Christophe);
+        Card c3Joao = new Card("Anes", CardsType.CRIMINALS, CardArt.c3Joao);
         Card w1Git = new Card("Git", CardsType.WEAPONS, CardArt.w1Git);
         Card w2Java = new Card("Java", CardsType.WEAPONS, CardArt.w2Java);
         Card w3JavaScript = new Card("JavaScript", CardsType.WEAPONS, CardArt.w3JavaScript);

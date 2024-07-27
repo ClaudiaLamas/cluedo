@@ -56,7 +56,7 @@ public class Game implements Runnable {
 
     }
 
-    private void finishGame() {
+    public void finishGame() {
         for (PlayerConnectionHandler player : players) {
             player.quitGame();
         }
@@ -101,7 +101,7 @@ public class Game implements Runnable {
             player.send(GameMessages.PLAYER_TURN);
 
             String missingMessage = getMissingCards(player);
-            player.send("Missing Cards: " + missingMessage + "/n/n");
+            player.send("Missing Cards: " + missingMessage + "\n\n");
 
             opponent.send(String.format(GameMessages.OPPONENT_TURN, player.getName()));
             opponent.send(GameMessages.SHOW_HAND_OF_CARDS
@@ -143,25 +143,6 @@ public class Game implements Runnable {
         }
     }
 
-    // public void handleOpponentAnswer(PlayerConnectionHandler player,
-    // PlayerConnectionHandler opponent,
-    // String opponentResponse) {
-
-    // Optional<Card> cardOptional = opponent.getHand().stream()
-    // .filter(card -> card.getName().equalsIgnoreCase(opponentResponse))
-    // .findFirst();
-
-    // if (cardOptional.isPresent()) {
-    // Card cardToShow = cardOptional.get();
-    // player.send(opponent.getName() + " has a card to show you: \n" +
-    // cardToShow.getCardArt());
-
-    // } else {
-    // opponent.send("\n You don't have that card. Please answer correctly. ");
-    // }
-
-    // }
-
     public String getMissingCards(PlayerConnectionHandler player) {
         return (player.getMissCards().stream().map(Card::getName)
                 .collect(Collectors.joining(" | ")));
@@ -199,23 +180,25 @@ public class Game implements Runnable {
 
     private void createCrimeEnvelope() {
 
-        List<Card> placeCards = selectAllCardsByType(CardsType.PLACES);
         List<Card> criminalCards = selectAllCardsByType(CardsType.CRIMINALS);
+        List<Card> placeCards = selectAllCardsByType(CardsType.PLACES);
         List<Card> weaponCards = selectAllCardsByType(CardsType.WEAPONS);
 
-        Card placeCrime = placeCards.get((int) (Math.random() * 6));
         Card criminalCrime = criminalCards.get((int) (Math.random() * 3));
+        Card placeCrime = placeCards.get((int) (Math.random() * 6));
         Card weaponCrime = weaponCards.get((int) (Math.random() * 6));
 
-        crimeEnvelope.add(placeCrime);
         crimeEnvelope.add(criminalCrime);
+        crimeEnvelope.add(placeCrime);
         crimeEnvelope.add(weaponCrime);
 
-        deck.remove(placeCrime);
         deck.remove(criminalCrime);
+        deck.remove(placeCrime);
         deck.remove(weaponCrime);
 
-        System.out.println("Crime envelope created with: " + crimeEnvelope);
+        System.out.println("Crime envelope created with: " + crimeEnvelope.stream()
+                .map(card -> card.getName())
+                .collect(Collectors.joining(" | ")));
 
     }
 
@@ -270,6 +253,10 @@ public class Game implements Runnable {
         }
     }
 
+    public List<Card> getCrimeEnvelope() {
+        return crimeEnvelope;
+    }
+
     public class PlayerConnectionHandler implements Runnable {
 
         private String name;
@@ -289,6 +276,7 @@ public class Game implements Runnable {
                 in = new Scanner(playerSocket.getInputStream());
                 this.hand = new ArrayList<>();
                 this.missingCards = new ArrayList<>(deck);
+                missingCards.removeAll(crimeEnvelope);
                 this.seenCards = new ArrayList<>();
             } catch (IOException e) {
                 throw new RuntimeException(e);
