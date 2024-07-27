@@ -1,6 +1,5 @@
 package server.commands;
 
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import game.Game;
