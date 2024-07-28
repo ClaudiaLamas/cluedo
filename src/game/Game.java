@@ -70,15 +70,11 @@ public class Game implements Runnable {
         createCrimeEnvelope();
         dealCards();
 
-        System.out.println("Player's hand: ");
         synchronized (players) {
             for (PlayerConnectionHandler player : players) {
                 player.send("Game Ready to Start!");
                 player.getSeenCards().addAll(player.hand);
                 player.getMissCards().removeAll(player.seenCards);
-
-                System.out.println(player.getName() + " ---> " +
-                        player.getHand().toString());
             }
         }
 
@@ -91,11 +87,8 @@ public class Game implements Runnable {
         round++;
         broadcastAll("=== ROUND -----> " + round + "  =====");
 
-        // for (PlayerConnectionHandler player : players) {
         for (int i = 0; i < players.size(); i++) {
-
             PlayerConnectionHandler player = players.get(i);
-
             PlayerConnectionHandler opponent = player.getOpponent();
 
             player.send(GameMessages.PLAYER_TURN);
@@ -108,38 +101,53 @@ public class Game implements Runnable {
                     + Board.printAllCardsArt(opponent.getHand()));
 
             boolean betReceived = false;
+            boolean validResponse = false;
 
+            // Waiting for the player to place a bet
             while (!betReceived) {
                 String playerMessage = player.getMessage();
 
                 if (playerMessage != null && playerMessage.startsWith("/bet")) {
                     player.send("Bet received: " + playerMessage);
                     betReceived = true;
-                    break;
                 }
 
+                // Sleep for a short period to prevent busy-waiting
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
 
-            boolean validResponse = false;
-
+            // Waiting for the opponent to respond to the bet
             while (!validResponse) {
                 String opponentMessage = opponent.getMessage();
 
-                if (opponentMessage != null && opponentMessage.startsWith("/showcard")) {
-                    Command command = Command.getCommandDescription("/showcard");
-                    command.getHandler().handleCommands(this, opponent);
-                    validResponse = true;
-                    break;
-                } else if (opponentMessage.equalsIgnoreCase("no")) {
-                    player.send(GameMessages.OPPONENT_DOESNT_HAVE_CARD_TO_SHOW);
-                    validResponse = true;
-                    break;
+                if (opponentMessage != null) {
+                    if (opponentMessage.startsWith("/showcard")) {
+                        Command command = Command.getCommandDescription("/showcard");
+                        command.getHandler().handleCommands(this, opponent);
+                        validResponse = true;
+                    } else if (opponentMessage.equalsIgnoreCase("no")) {
+                        player.send(GameMessages.OPPONENT_DOESNT_HAVE_CARD_TO_SHOW);
+                        validResponse = true;
+                    } else {
+                        opponent.send("Invalid command");
+                    }
+                }
 
-                } else {
-                    opponent.send("Invalid command");
+                // Sleep for a short period to prevent busy-waiting
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
 
+            // Clear messages for the next turn
+            player.clearMessage();
+            opponent.clearMessage();
         }
     }
 
@@ -172,9 +180,8 @@ public class Game implements Runnable {
 
     private boolean checkIfGameCanStart() {
         synchronized (players) {
-            boolean canStart = players.size() == MAX_NUM_PLAYERS &&
+            return players.size() == MAX_NUM_PLAYERS &&
                     players.stream().allMatch(player -> player.getName() != null && !player.getName().isEmpty());
-            return canStart;
         }
     }
 
@@ -257,6 +264,10 @@ public class Game implements Runnable {
         return crimeEnvelope;
     }
 
+    public int getRound() {
+        return round;
+    }
+
     public class PlayerConnectionHandler implements Runnable {
 
         private String name;
@@ -268,6 +279,7 @@ public class Game implements Runnable {
         private List<Card> hand;
         private List<Card> missingCards;
         private List<Card> seenCards;
+        private int playerRound;
 
         public PlayerConnectionHandler(Socket playerSocket) {
             this.playerSocket = playerSocket;
@@ -278,6 +290,7 @@ public class Game implements Runnable {
                 this.missingCards = new ArrayList<>(deck);
                 missingCards.removeAll(crimeEnvelope);
                 this.seenCards = new ArrayList<>();
+                this.playerRound = 0;
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
