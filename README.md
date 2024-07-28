@@ -36,6 +36,38 @@ In the first round, on your turn, you must place a bet with each type of cards. 
 At each round you can place a bet or a final bet. But the final bet, you only can place it after the 1st round. The opponent, must answer you showing you a card. 
 It's the same for each player to proceed to the next round.
 
+        // PLAYER SIDE
+        === ROUND -----> 1  =====
+        
+        
+         It's your turn. Make a bet! 
+        
+        
+        Missing Cards: Mindera | Blip | MOG | Velho | Anes | Git | Java | Docker | React
+
+        
+        // OPPONENT SIDE
+        === ROUND -----> 1  =====
+        
+        
+        It's ana's turn. wait for his bet...
+        
+        
+        
+        YOUR HAND OF CARDS YOU CAN SHOW TO YOUR OPPONENT 
+        
+        .________________.    .________________.    .________________.    .________________.    .________________.    .________________.    
+        |    *WEAPONS*   |   |  *CRIMINALS*   |   |   *WEAPONS*    |   |    *PLACES*    |   |    *PLACES*    |   |    *WEAPONS*   |   
+        |      💉💀      |   |       👿       |   |     💉💀       |   |       🏢       |   |       🏢       |   |      💉💀      |   
+        | .____________. |   | .____________. |   | .____________. |   | .____________. |   | .____________. |   | .____________. |   
+        | |    React   | |   | |            | |   | |    Git     | |   | |    MOG     | |   | |   Mindera  | |   | |    Java    | |   
+        | |    React   | |   | |   Velho    | |   | |            | |   | |            | |   | |            | |   | |            | |   
+        | '____________' |   | '------------' |   | '------------' |   | '------------' |   | '------------' |   | '------------' |   
+        |                |   |                |   |                |   |                |   |                |   |                |   
+        '________________'    '________________'    '________________'    '________________'    '________________'    '________________'    
+                          
+
+
 ## Final Bet
 The Player can only place one Final Bet from the second round onwards. If the betting cards match all the cards in the secret envelope crime he wins the game, if any are different he loses the game.
 
